@@ -1,0 +1,30 @@
+# Build with, for example:
+#   podman build --build-arg OPENCLAW_VERSION=2026.9.3 -t openclaw-browser:2026.9.3 -f Dockerfile.browser .
+ARG OPENCLAW_VERSION=latest
+FROM ghcr.io/openclaw/openclaw:${OPENCLAW_VERSION}
+
+ARG GOG_VERSION=0.41.0
+
+# The official OpenClaw image runs as the unprivileged `node` user.
+USER root
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y ca-certificates chromium curl \
+    && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+    architecture="$(dpkg --print-architecture)"; \
+    case "$architecture" in \
+      amd64) gog_arch=amd64 ;; \
+      arm64) gog_arch=arm64 ;; \
+      *) echo "Unsupported GOG architecture: $architecture" >&2; exit 1 ;; \
+    esac; \
+    archive="gogcli_${GOG_VERSION}_linux_${gog_arch}.tar.gz"; \
+    release_url="https://github.com/openclaw/gogcli/releases/download/v${GOG_VERSION}"; \
+    temp_dir="$(mktemp -d)"; \
+    trap 'rm -rf "$temp_dir"' EXIT; \
+    curl --fail --location --silent --show-error --output "$temp_dir/$archive" "$release_url/$archive"; \
+    curl --fail --location --silent --show-error --output "$temp_dir/checksums.txt" "$release_url/checksums.txt"; \
+    (cd "$temp_dir" && grep " $archive$" checksums.txt | sha256sum --check --status -); \
+    tar --extract --gzip --file "$temp_dir/$archive" --directory /usr/local/bin ./gog; \
+    chmod 0755 /usr/local/bin/gog; \
+    gog --version
+USER node
