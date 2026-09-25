@@ -1,0 +1,18 @@
+# Secrets and local OAuth material — never commit these.
+.env
+.env.*
+!.env.example
+credentials.json
+client_secret*.json
+token.json
+tokens.json
+oauth*.json
+
+# GOG local configuration and OAuth token store.
+.gog/
+gog/
+gogcli/
+
+# Editor and local build artefacts.
+.DS_Store
+*.log
